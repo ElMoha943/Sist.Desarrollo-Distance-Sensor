@@ -12,6 +12,7 @@
 #pragma config WRT = OFF
 
 #include <xc.h>
+#include <stdio.h>
 #include"hcsr04.h"
 
 void main(){
@@ -24,6 +25,15 @@ void main(){
     TRISD = 0x00;
     ANSEL=0;
     ANSELH=0;
+
+    //CONFIGURACION DE UWART
+    TRISCbits.TRISC6=0;
+    BRG16=0;
+    BRGH=1;
+    SPBRG=25;
+    TXSTAbits.TXEN=1;
+    RCSTAbits.CREN=1;
+    RCSTAbits.SPEN=1;
 
     //Timer0 Registers Prescaler= 256 - TMR0 Preset = 60 - Freq = 19.93 Hz - Period = 0.050176 seconds
     T0CS = 0;  // bit 5  TMR0 Clock Source Select bit...0 = Internal Clock (CLKO) 1 = Transition on T0CKI pin
@@ -44,8 +54,7 @@ void main(){
     TMR1H = 255;   // preset for timer1 MSB register
     TMR1L = 255;   // preset for timer1 LSB register
 
-    unsigned int d=0, t=0, s=0;
-
+    unsigned int t=0, d=0, s=0;
     while (1)
     {
         //TIMER0
@@ -58,11 +67,11 @@ void main(){
             if(s==20)
             {
                 s=0;
-                // Enviamos un pulso de 10us
+                // Send 10us pulse to HC-SR04 Trigger pin
                 TRIGGER = 1;
                 __delay_us(10);
                 TRIGGER = 0;
-                // Esperamos la respuesta del sensor
+                // Read pulse comes from HC-SR04 Echo pin
                 while(ECHO==0);
                 TMR1ON = 0;
                 TMR1H = 0;
@@ -71,9 +80,15 @@ void main(){
                 while(ECHO==1);
                 TMR1ON = 0;
                 t = (TMR1H << 8) | TMR1L;
-                d = t/58; //Distancia en cm
-                MostrarDisplay(d);
+                d = (t/58)+1;
+                printf("Tiempo: %d\r\n",t);
+                printf("Distancia: %d\r\n",d);
             }
         }
     }
+}
+
+void putch(char c){
+    while(TXIF==0);
+    TXREG=c;
 }
